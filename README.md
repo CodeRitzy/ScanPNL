@@ -105,6 +105,7 @@ Settings save automatically. Buy/sell bubbles, average buy/sell lines, and termi
 - [x] Positions, history, calendar summaries, and P&amp;L cards
 - [ ] Broader live-terminal compatibility verification
 - [ ] Optional custom P&amp;L-card branding
+- [ ] Adding other chains for trading
 
 See `paper-terminal-extension/CHANGES.md` for release notes and `COMPARISON.md` for implementation notes and verification limits.
 
