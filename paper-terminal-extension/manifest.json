@@ -1,0 +1,83 @@
+{
+  "manifest_version": 3,
+  "name": "ScanPNL",
+  "short_name": "ScanPNL",
+  "version": "1.0.0",
+  "description": "Instant trade controls, positions, chart fills, and live P&L for supported crypto terminals.",
+  "icons": {
+    "16": "assets/scanpnl-icon-16.png",
+    "32": "assets/scanpnl-icon-32.png",
+    "48": "assets/scanpnl-icon-48.png",
+    "128": "assets/scanpnl-icon-128.png"
+  },
+  "permissions": [
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "https://axiom.trade/*",
+    "https://*.axiom.trade/*",
+    "https://gmgn.ai/*",
+    "https://*.gmgn.ai/*",
+    "https://*.padre.gg/*",
+    "https://*.terminal.trade/*",
+    "https://photon-sol.tinyastro.io/*",
+    "https://*.bullx.io/*",
+    "https://dexscreener.com/*",
+    "https://api.dexscreener.com/*",
+    "https://api.mainnet.solana.com/*",
+    "https://solana-rpc.publicnode.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "ScanPNL",
+    "default_icon": {
+      "16": "assets/scanpnl-icon-16.png",
+      "32": "assets/scanpnl-icon-32.png",
+      "48": "assets/scanpnl-icon-48.png",
+      "128": "assets/scanpnl-icon-128.png"
+    },
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://axiom.trade/*",
+        "https://*.axiom.trade/*",
+        "https://gmgn.ai/*",
+        "https://*.gmgn.ai/*",
+        "https://*.padre.gg/*",
+        "https://*.terminal.trade/*",
+        "https://photon-sol.tinyastro.io/*",
+        "https://*.bullx.io/*",
+        "https://dexscreener.com/*"
+      ],
+      "js": [
+        "page-bridge.js"
+      ],
+      "run_at": "document_start",
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "https://axiom.trade/*",
+        "https://*.axiom.trade/*",
+        "https://gmgn.ai/*",
+        "https://*.gmgn.ai/*",
+        "https://*.padre.gg/*",
+        "https://*.terminal.trade/*",
+        "https://photon-sol.tinyastro.io/*",
+        "https://*.bullx.io/*",
+        "https://dexscreener.com/*"
+      ],
+      "js": [
+        "trade-settings.js",
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "dashboard.html"
+}

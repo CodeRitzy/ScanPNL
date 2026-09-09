@@ -1,0 +1,4 @@
+import {spawnSync} from 'node:child_process';import {fileURLToPath} from 'node:url';
+const files=['unit','geometry','chart-routes','settings-quickbuy','editor-flow','quick-row-layout','quick-order-flow','market-fallback','portfolio-data','dashboard-flow','media-export','new-pair-flow','onchain-quotes','launch-lifecycle','reentry-averages','initial-balance','detail-new-pair','execution-options','chart-fallbacks','settings-pane','quote-race','worker-quick','price-integrity','chart-retry','branding'];let total=0;
+for(const name of files){const r=spawnSync(process.execPath,[fileURLToPath(new URL(name+'.mjs',import.meta.url))],{encoding:'utf8',timeout:30000});if(r.status!==0){process.stderr.write(r.stdout+r.stderr);process.exit(1);}const last=r.stdout.trim().split('\n').at(-1);console.log(last);total+=Number(last.match(/^(\d+)/)?.[1]||0);}
+console.log(`PASS: ${total} checks across ${files.length} suites.`);

@@ -1,0 +1,14 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+const source=fs.readFileSync(new URL('../paper-terminal-extension/content.js',import.meta.url),'utf8');
+const start=source.indexOf('  function isDetailPage('),end=source.indexOf('\n  }',start)+4;
+let site='axiom',address='So11111111111111111111111111111111111111112';
+const c={location:{pathname:'/meme/'+address},readPageToken:()=>({address}),detectSiteId:()=>site,findPageChartElement:()=>({isConnected:true}),isListingPage:()=>false};
+vm.createContext(c);vm.runInContext(source.slice(start,end)+'\nglobalThis.detail=isDetailPage;',c);
+let passed=0;const test=(name,run)=>{run();passed++;console.log('PASS '+name);};
+test('wallet/profile pages reject lingering charts and valid base58 identities',()=>{for(const path of ['/profile/','/user/','/wallet/','/account/','/portfolio/','/tracker/']){c.location.pathname=path+address;assert.equal(c.detail(),false);}});
+test('Axiom token aliases stay eligible for drawings',()=>{for(const path of ['/meme/','/t/','/token/']){c.location.pathname=path+address;assert.equal(c.detail(),true);}});
+test('a leftover chart does not turn an unrelated page into a token page',()=>{for(const path of ['/pulse','/settings','/rewards','/notifications']){c.location.pathname=path;assert.equal(c.detail(),false);}c.location.pathname='/meme/missing';address='';assert.equal(c.detail(),false);address='So11111111111111111111111111111111111111112';});
+test('other supported terminal token routes remain eligible',()=>{for(const [id,path] of [['terminal','/trade/solana/'],['gmgn','/sol/token/'],['photon','/en/lp/'],['bullx','/terminal/'],['dexscreener','/solana/'],['unknown','/token/']]){site=id;c.location.pathname=path+address;assert.equal(c.detail(),true,id);}});
+console.log(`${passed} chart route tests passed`);

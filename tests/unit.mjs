@@ -1,0 +1,38 @@
+import fs from 'node:fs';
+import vm from 'node:vm';
+import assert from 'node:assert/strict';
+import { webcrypto } from 'node:crypto';
+const dir = new URL('../paper-terminal-extension/', import.meta.url);
+const content = fs.readFileSync(new URL('content.js',dir),'utf8');
+const bridge = fs.readFileSync(new URL('page-bridge.js',dir),'utf8');
+const c = { structuredClone, crypto:webcrypto, console, location:{hostname:'axiom.trade'}, window:{}, document:{}, Intl, setTimeout, clearTimeout };
+vm.createContext(c);
+vm.runInContext(fs.readFileSync(new URL("trade-settings.js",dir),"utf8"),c);
+vm.runInContext(content.replace('  init();','  globalThis.api = {DEFAULT_STATE, panelAmountPresets, executeBuy, executeSell, normalizeState, toUsd, positionKey};'),c);
+function fn(source,name) {const a=source.indexOf(`  function ${name}(`); assert.ok(a>=0,name); return source.slice(a,source.indexOf('\n  }',a)+4);}
+const b = {console, Map, Number, Math}; vm.createContext(b);
+vm.runInContext('const fillAnchors = new Map();\n'+['groupChartPoints','candleAtOrBefore','fillCandleAnchor','mergeCandleBars','extractCandleBars'].map(n=>fn(bridge,n)).join('\n')+'\nglobalThis.api={groupChartPoints,candleAtOrBefore,fillCandleAnchor,mergeCandleBars,extractCandleBars};',b);
+const a=c.api, m=b.api; let passes=0;
+function test(name,run){run();passes++;console.log(`PASS ${name}`)}
+const settings=structuredClone(a.DEFAULT_STATE.settings);
+test('eight quick amounts per side without changing saved presets',()=>{const before=JSON.stringify(settings);const p=a.panelAmountPresets(settings);assert.equal(p.buys.length,8);assert.equal(p.sells.length,8);assert.equal(JSON.stringify(settings),before);});
+test('full exit is always on compact row',()=>assert.equal(a.panelAmountPresets(settings).sells[3],100));
+test('saved fifth buy and 75% sell retained',()=>{const p=a.panelAmountPresets(settings);assert.equal(p.buys[4].id,settings.buyPresets[4].id);assert.ok(p.sells.includes(75));});
+test('custom USD amounts preserve economic value',()=>{const s={...settings,buyPresets:[{id:'custom',value:100,unit:'USD',confirm:true}]};const p=a.panelAmountPresets(s);assert.equal(a.toUsd(p.buys[0].value,p.buys[0].unit,s.solPrice),100);assert.equal(p.buys[0].confirm,true);});
+test('no zero or duplicate supplemental amounts',()=>{const p=a.panelAmountPresets(settings);assert.ok(p.sells.every(n=>n>0&&n<=100));const usd=p.buys.map(x=>a.toUsd(x.value,x.unit,settings.solPrice));assert.ok(usd.every(n=>n>0));assert.equal(new Set(usd).size,usd.length);});
+test('more than eight custom amounts retained',()=>{const s={...settings,buyPresets:Array.from({length:12},(_,i)=>({id:`c${i}`,value:i+1,unit:'SOL'}))};assert.equal(a.panelAmountPresets(s).buys.length,12);});
+const point=(i,x,y=200,side='buy')=>({x,y,time:1000+i,fill:{id:`f${i}`,timestamp:(1000+i)*1000,side}});
+test('isolated markers use exact candle positions',()=>{const points=[point(0,100),point(1,200)];const groups=m.groupChartPoints(points);assert.equal(groups.length,2);assert.equal(groups[0].point,points[0]);});
+test('same-candle buys and sells stay separate with all fills represented',()=>{const points=[point(0,100),point(1,100,200,'sell'),point(2,100)];const g=m.groupChartPoints(points);assert.equal(g.length,2);assert.equal(g[0].fills.length,2);assert.equal(g[1].fills.length,1);assert.equal(g[0].point,points[2]);assert.equal(g[0].offsetX,-11);assert.equal(g[1].offsetX,11);});
+test('zoomed-out plateau cannot collapse transitively into one marker',()=>{const points=Array.from({length:100},(_,i)=>point(i,i*5));const g=m.groupChartPoints(points);assert.ok(g.length>10);assert.equal(g.reduce((n,x)=>n+x.fills.length,0),100);assert.ok(g.every(x=>x.maxX-x.minX<30));});
+test('zoom-in separates groups automatically',()=>{const points=[point(0,100),point(1,105)];assert.equal(m.groupChartPoints(points).length,1);assert.equal(m.groupChartPoints(points.map(p=>({...p,x:p.x*10}))).length,2);});
+test('adjacent high spike cannot lift a separate marker',()=>{const points=[point(0,100,300),point(1,105,20)];const g=m.groupChartPoints(points);assert.equal(g.length,2);assert.equal(g[0].point.y,300);});
+test('group coordinates always belong to latest actual fill candle',()=>{const points=[point(10,100,210),point(9,101,200)];const g=m.groupChartPoints(points);assert.equal(g[0].point,points[0]);});
+test('missing fill candle never attaches to a stale preceding candle',()=>{assert.equal(m.fillCandleAnchor({id:'gap',timestamp:1015000},'1S',[{time:1000,high:20},{time:1020,high:30}],'usd'),null);const anchor=m.fillCandleAnchor({id:'gap',timestamp:1015000},'1S',[{time:1015,high:25}],'usd');assert.equal(anchor.time,1015);assert.equal(anchor.high,25);});
+test('unavailable earlier history never invents a candle',()=>assert.equal(m.fillCandleAnchor({id:'early',timestamp:999000},'1S',[{time:1000,high:20}],1),null));
+test('cached native wick stays in chart units and waits for bars on a unit switch',()=>{const fill={id:'rate',timestamp:1000000};m.fillCandleAnchor(fill,'1S',[{time:1000,high:20}],'native');const next=m.fillCandleAnchor(fill,'1S',[],'native');assert.equal(next.high,20);assert.equal(m.fillCandleAnchor(fill,'1S',[],'usd'),null);assert.equal(m.fillCandleAnchor(fill,'1S',[{time:1000,high:2000}],'usd').high,2000);});
+test('partial history retains bars and growing live high',()=>{const merged=m.mergeCandleBars([{time:1000,high:30},{time:1010,high:20}],[{time:1010,high:15},{time:1020,high:50}]);assert.equal(merged.length,3);assert.equal(merged[1].high,20);});
+const token={address:'So11111111111111111111111111111111111111112',chain:'solana',price:1,symbol:'TEST',name:'Test',source:'page',liquidity:1e7};
+test('supplemental SOL amount produces correct gross spend',()=>{const state=structuredClone(a.DEFAULT_STATE);const p=a.panelAmountPresets(state.settings).buys[5];const usd=a.toUsd(p.value,p.unit,state.settings.solPrice);const r=a.executeBuy(state,token,usd);assert.ok(r.ok,r.message);assert.ok(r.state.balanceUsd<state.balanceUsd);assert.equal(r.state.fills.length,1);assert.equal(r.state.fills[0].side,'buy');assert.equal(r.state.fills[0].grossUsd,usd);});
+test('full exit removes held quantity and keeps fill history',()=>{const buy=a.executeBuy(structuredClone(a.DEFAULT_STATE),token,100);assert.ok(buy.ok);const sell=a.executeSell(buy.state,token,100);assert.ok(sell.ok,sell.message);assert.equal(sell.state.positions[a.positionKey(token)].quantity,0);assert.equal(sell.state.fills.length,2);});
+console.log(`${passes} tests passed`);

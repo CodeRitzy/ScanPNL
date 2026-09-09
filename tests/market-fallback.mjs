@@ -1,0 +1,31 @@
+// Actual service-worker message handling and content submission with mocked
+// HTTP responses. No live price service, wallet, or browser is involved.
+import fs from 'node:fs';import vm from 'node:vm';import assert from 'node:assert/strict';import {webcrypto} from 'node:crypto';
+import {loadWorker} from './load-worker.mjs';
+const dir=new URL('../paper-terminal-extension/',import.meta.url);
+const A='So11111111111111111111111111111111111111112',P='Po11111111111111111111111111111111111111112',B='To11111111111111111111111111111111111111112';
+let handler,stored,requests=[],payload,mode='missing-price',rowReads=0,commits=0,onFetch=()=>{};
+const pair=(price=.002)=>({chainId:'solana',pairAddress:P,baseToken:{address:A,symbol:'TEST'},priceUsd:String(price),liquidity:{usd:1e6}});
+payload={pairs:[pair()]};
+const runtime={onInstalled:{addListener(){}},onStartup:{addListener(){}},onMessage:{addListener(fn){handler=fn}},async sendMessage(msg){return new Promise(resolve=>{if(msg.type==='COMMIT_TRADE')commits++;handler(msg,{},resolve)})}};
+const chrome={runtime,storage:{local:{async get(){return {paperTerminalState:structuredClone(stored)}},async set(obj){stored=structuredClone(obj.paperTerminalState)}}},alarms:{onAlarm:{addListener(){}}}};
+const w={chrome,Map,Date,AbortSignal,console,fetch:async(url,options)=>{if(options?.method==='POST')return {ok:true,json:async()=>({error:{message:'no curve'}})};requests.push({url,options});onFetch();return {ok:true,json:async()=>structuredClone(payload)}}};loadWorker(w,'\nglobalThis.cacheApi={liveQuotes,quoteCache};');
+const events=new EventTarget();events.setTimeout=setTimeout;
+events.addEventListener('paper-terminal:quote-request',e=>{const request=JSON.parse(e.detail);rowReads++;let quote={address:A,rowAddress:A,observedAt:Date.now()};if(mode==='removed')quote=null;if(mode==='wrong-row')quote.address=B;if(mode==='late-feed'&&rowReads>=3)Object.assign(quote,{price:.001,quoteSource:'row-feed',priceObservedAt:Date.now()});events.dispatchEvent(new CustomEvent('paper-terminal:row-quote',{detail:JSON.stringify({requestId:request.requestId,quote})}));});
+const c={window:events,CustomEvent,crypto:webcrypto,structuredClone,Intl,console,chrome,location:{hostname:'axiom.trade',pathname:'/pulse',hash:'',href:'https://axiom.trade/pulse'},document:{getElementById:()=>null},requestAnimationFrame:()=>1,cancelAnimationFrame(){},setTimeout:(fn,ms)=>setTimeout(fn,Math.min(ms,1)),clearTimeout};vm.createContext(c);
+vm.runInContext(fs.readFileSync(new URL('trade-settings.js',dir),'utf8'),c);
+vm.runInContext(fs.readFileSync(new URL('content.js',dir),'utf8').replace('  init();','  globalThis.api={DEFAULT_STATE,executeQuickBuy,marketQuickQuote};'),c);
+const placeholder={dataset:{paperTerminalTokenAddress:A},textContent:'',querySelectorAll:()=>[],getBoundingClientRect:()=>({width:0,height:0}),getAttribute:()=>null,parentElement:null,closest:()=>null};
+const token={address:A,rowAddress:A,terminal:'axiom',chain:'solana'};
+const buy=()=>c.api.executeQuickBuy(placeholder,null,token);
+const reset=()=>{stored=structuredClone(c.api.DEFAULT_STATE);stored.settings.solPrice=100;requests=[];mode='missing-price';rowReads=0;commits=0;payload={pairs:[pair()]};onFetch=()=>{};w.cacheApi.liveQuotes.clear();w.cacheApi.quoteCache.clear()};
+let passed=0;const test=async(name,run)=>{reset();await run();passed++;console.log('PASS '+name)};
+await test('missing React price fills from one fresh HTTP read with final row validation',async()=>{const result=await buy();assert.ok(result.ok,result.message);assert.equal(requests.length,1);assert.equal(rowReads,3);assert.equal(commits,1);assert.equal(stored.fills.length,1);assert.equal(stored.fills[0].token.source,'dexscreener');assert.equal(stored.fills[0].token.price,.002);assert.ok(requests.every(r=>r.options.cache==='no-store'))});
+await test('fill lookup bypasses live tab cache and display cache',async()=>{w.cacheApi.liveQuotes.set(A,{address:A,price:99,priceUpdatedAt:Date.now()});w.cacheApi.quoteCache.set(A,{pair:pair(88),at:Date.now()});const r=await buy();assert.ok(r.ok,r.message);assert.equal(requests.length,1);assert.equal(stored.fills[0].token.price,.002)});
+await test('quote returned for another mint or chain cannot fill',async()=>{payload={pairs:[{...pair(99),chainId:'base'},{...pair(88),baseToken:{address:B}}]};const result=await buy();assert.equal(result.ok,false);assert.equal(commits,0);assert.equal(stored.fills.length,0)});
+await test('row removed during market request cancels the order',async()=>{onFetch=()=>{mode='removed'};const result=await buy();assert.equal(result.ok,false);assert.match(result.message,/row changed/i);assert.equal(commits,0)});
+await test('row identity changed during request cancels the order',async()=>{onFetch=()=>{mode='wrong-row'};const result=await buy();assert.equal(result.ok,false);assert.equal(commits,0)});
+await test('unindexed listing can use its first arriving live feed tick',async()=>{payload={pairs:[]};mode='late-feed';const result=await buy();assert.ok(result.ok,result.message);assert.equal(commits,1);assert.equal(stored.fills[0].token.price,.001);assert.equal(stored.fills[0].token.source,'row-feed')});
+await test('fresh market response preserves pair-to-mint identity',()=>{const q=c.api.marketQuickQuote({...token,address:P,rowAddress:P},{ok:true,address:P,observedAt:Date.now(),pair:pair()});assert.equal(q.address,A);assert.equal(q.rowAddress,P)});
+await test('old market response is not relabelled as fresh',()=>{assert.equal(c.api.marketQuickQuote(token,{ok:true,address:A,observedAt:Date.now()-5000,pair:pair()}),null)});
+console.log(`${passed} market fallback tests passed`);
