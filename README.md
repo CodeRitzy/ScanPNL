@@ -8,7 +8,7 @@
   <h3 align="center">ScanPNL</h3>
 
   <p align="center">
-    A Chrome extension for simulated Solana terminal workflows with instant controls, live P&amp;L, and chart-level trade context.
+    A Chrome extension for simulated memecoin terminal workflows with instant controls, live P&amp;L, and chart-level trade context.
     <br />
     <a href="#getting-started"><strong>Get started »</strong></a>
     <br />
