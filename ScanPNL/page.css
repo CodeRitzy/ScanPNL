@@ -1,0 +1,214 @@
+/* axiom elements replaced by a paper copy */
+[data-scanpnl-hidden] {
+  display: none !important;
+}
+
+/* the scanpnl chip on axiom's instant-trade panel: anchor positioning pins it to the panel's
+   top edge and follows the panel when it is dragged (chrome 125+) */
+html[data-scanpnl-paper="on"] .buy-click-container {
+  anchor-name: --scanpnl-instant;
+}
+#scanpnl-chip {
+  display: none;
+}
+@supports (anchor-name: --a) {
+  #scanpnl-chip {
+    position: fixed;
+    position-anchor: --scanpnl-instant;
+    position-visibility: anchors-visible;
+    top: anchor(top);
+    left: anchor(center);
+    translate: -50% -50%;
+    z-index: 2147483646;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    box-sizing: border-box;
+    height: 20px;
+    margin: 0;
+    padding: 0 8px 0 4px;
+    border: 1px solid #ffffff1c;
+    border-radius: 999px;
+    background:
+      linear-gradient(155deg, #ffffff12, #bba8ef05 70%),
+      rgb(21 20 25 / 0.8);
+    box-shadow:
+      inset 0 1px 0 #ffffff20,
+      0 6px 14px -8px rgb(8 6 13 / 0.9);
+    -webkit-backdrop-filter: blur(10px) saturate(125%);
+    backdrop-filter: blur(10px) saturate(125%);
+    color: #f1eef5;
+    font:
+      600 11px/1 -apple-system,
+      BlinkMacSystemFont,
+      "Helvetica Neue",
+      Arial,
+      sans-serif;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+}
+#scanpnl-chip[hidden] {
+  display: none !important;
+}
+#scanpnl-chip svg {
+  display: block;
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+#scanpnl-chip span {
+  display: inline;
+  color: inherit;
+  font: inherit;
+}
+
+/* paper position rows in axiom's tables */
+.scanpnl-position {
+  display: grid;
+  align-items: center;
+  min-height: 72px;
+  border-bottom: 1px solid #44444455;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 20px;
+}
+.scanpnl-cell {
+  min-width: 0;
+  padding: 10px 12px;
+  overflow: hidden;
+}
+.scanpnl-cell small {
+  display: block;
+  color: #85858b;
+  font-family: inherit;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 4px;
+}
+.scanpnl-cell a {
+  color: inherit;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.scanpnl-value {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.scanpnl-value img {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+.scanpnl-token {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: inherit;
+  text-decoration: none;
+}
+.scanpnl-token > img {
+  border-radius: 4px;
+  object-fit: cover;
+  flex: none;
+}
+.scanpnl-token > span {
+  min-width: 0;
+}
+.scanpnl-token > span > span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.scanpnl-empty {
+  padding: 24px;
+  color: #999;
+  font-family: inherit;
+  font-size: 14px;
+}
+.scanpnl-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 4px;
+  background: #444;
+  color: #ddd;
+  font-size: 12px;
+}
+
+/* numbers written in axiom's format stay on one line */
+[data-scanpnl-formatted] {
+  white-space: nowrap;
+}
+
+/* ticker bar: the hover rail on a paper position */
+.scanpnl-ticker-rail {
+  position: relative;
+  height: 24px;
+  width: 0;
+  flex: none;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.scanpnl-ticker-rail > [data-ticker-rail-clip] {
+  position: static !important;
+  width: 24px;
+  height: 24px;
+  overflow: hidden;
+}
+.scanpnl-ticker-rail button {
+  height: 24px;
+  min-width: 24px;
+  cursor: pointer;
+}
+[data-scanpnl-mint]:hover > .scanpnl-ticker-rail,
+[data-scanpnl-mint]:focus-within > .scanpnl-ticker-rail {
+  width: 24px;
+  min-width: 24px;
+  visibility: visible;
+  pointer-events: auto;
+}
+[data-scanpnl-mint]:hover > .scanpnl-ticker-rail *,
+[data-scanpnl-mint]:focus-within > .scanpnl-ticker-rail * {
+  pointer-events: auto !important;
+}
+
+/* pnl colors: axiom's green for a gain, red for a loss */
+[data-scanpnl-pnl-sign="positive"],
+[data-scanpnl-pnl-sign="positive"] span,
+[data-scanpnl-pnl-sign="positive"] sub {
+  color: rgb(var(--increase, 68 248 236)) !important;
+}
+[data-scanpnl-pnl-sign="negative"],
+[data-scanpnl-pnl-sign="negative"] span,
+[data-scanpnl-pnl-sign="negative"] sub {
+  color: rgb(var(--decrease, 236 57 122)) !important;
+}
+
+/* sell preview turns gray while the sell button is hovered */
+.buy-click-container:has([data-scanpnl-action="sell"]:hover) [data-scanpnl-sell-preview],
+.buy-click-container:has([data-scanpnl-action="sell"]:hover) [data-scanpnl-sell-preview] span,
+.buy-click-container:has([data-scanpnl-action="sell"]:hover) [data-scanpnl-sell-preview] sub {
+  color: var(--scanpnl-preview-gray) !important;
+}
+
+/* portfolio wallet menu: with the paper wallet selected, axiom's wallets show as unselected */
+[data-scanpnl-paper-on] .toggle-ring:not([data-scanpnl-wallet-choice] .toggle-ring) {
+  border-color: #ffffff38 !important;
+}
+[data-scanpnl-paper-on] .toggle-ring:not([data-scanpnl-wallet-choice] .toggle-ring) > * {
+  background: transparent !important;
+}

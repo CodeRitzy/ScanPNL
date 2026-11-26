@@ -1,0 +1,186 @@
+<!doctype html>
+<!-- stand-in for an axiom token page, served at https://axiom.trade/meme/<pair> by run.mjs;
+     it has the parts the extension reads (solscan link, price, sol price, tax %, the instant-trade
+     window, a pulse card with a quick-buy button) and moves the price like axiom's live feed;
+     page click handlers record clicks and try to send a real order -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Axiom fixture</title>
+    <script>
+      // captured before any extension code runs: the guard must already wrap it
+      window.capturedFetch = window.fetch;
+    </script>
+    <style>
+      body { margin: 0; min-height: 100vh; background: #0b0b0f; color: #ddd; font: 13px system-ui; }
+      header { display: flex; gap: 16px; align-items: center; padding: 12px 16px; border-bottom: 1px solid #222; }
+      main { display: grid; grid-template-columns: 1fr 340px; gap: 16px; padding: 16px; }
+      .chart { height: 420px; border: 1px solid #222; border-radius: 8px; background: linear-gradient(#14141a, #0e0e12); }
+      /* Axiom's instant-trade window is dragged with a transform (react-draggable style). */
+      .window { position: fixed; left: 0; top: 0; width: 320px; transform: translate(1080px, 430px); border: 1px solid #333; border-radius: 10px; background: #16161c; }
+      .title { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid #262630; }
+      .title button { margin-left: auto; background: none; border: 1px solid #333; color: #bbb; border-radius: 6px; }
+      .buy-click-container { padding: 10px 12px; }
+      .head { display: flex; justify-content: space-between; align-items: center; }
+      .row { display: flex; gap: 6px; margin-top: 8px; }
+      .cursor-pointer { flex: 1; padding: 6px; border: 1px solid #333; border-radius: 6px; text-align: center; cursor: pointer; }
+      .text-increase { color: #2fe3ac; } .text-decrease { color: #ec397a; }
+      .fees { display: flex; gap: 12px; margin-top: 6px; color: #a3a3ad; font-size: 12px; }
+      .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; padding: 10px 12px; border-top: 1px solid #262630; font-size: 12px; }
+      .metrics > div { display: flex; flex-direction: column; min-width: 0; }
+      .pct { display: block; font-size: 11px; }
+      .pulse { margin: 0 16px; padding: 10px; border: 1px solid #222; border-radius: 8px; width: 420px; }
+      .card { display: flex; gap: 10px; align-items: center; padding: 8px; }
+      .primaryBlue { background: #3550e6; color: #fff; border: 0; border-radius: 999px; padding: 4px 10px; }
+      i { display: inline-block; width: 10px; height: 10px; background: #555; border-radius: 2px; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <strong>AXIOM (fixture)</strong>
+      <button id="sol-price"><img alt="SOL" width="12" height="12" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Ccircle cx='6' cy='6' r='6' fill='%239945ff'/%3E%3C/svg%3E" />$100</button>
+      <div><span>Price</span><span id="price">$0.01</span></div>
+      <a id="solscan" href="https://solscan.io/token/7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr">CA</a>
+      <div><div id="tax">1.25%</div><span>Tax %</span></div>
+    </header>
+    <!-- ticker bar: watchlist / active positions / recent pairs; the selected view is text-textSecondary -->
+    <div id="ticker-bar">
+      <div>
+        <button type="button" data-view="watchlist" class="text-textTertiary"><i class="ri-star-line"></i></button>
+        <button type="button" data-view="positions" class="text-textTertiary"><i class="ri-line-chart-line"></i></button>
+        <button type="button" data-view="recentPairs" class="text-textSecondary"><i class="ri-history-line"></i></button>
+      </div>
+      <section aria-label="Ticker list">
+        <div data-ticker-strip="true"><a data-ticker-chip="true" id="recent-chip" href="/token/So11111111111111111111111111111111111111112">RECENT</a></div>
+      </section>
+    </div>
+    <!-- floating pnl tracker; the reset button shows in its hover toolbar -->
+    <div data-persistent-popup-frame="pnl-tracker" style="position: fixed; right: 8px; bottom: 8px">
+      <button type="button" id="tracker-reset"><i class="ri-reset-left-line"></i></button>
+    </div>
+    <main>
+      <div class="chart"></div>
+      <aside><p>Token info</p></aside>
+    </main>
+    <section class="pulse" data-pulse-chain="sol">
+      <h2>New Pairs</h2>
+      <div class="card" data-pulse-token-address="4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R">
+        <img alt="QBT" width="24" height="24" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Crect width='24' height='24' rx='5' fill='%23e0a040'/%3E%3C/svg%3E" />
+        <span>QBT</span>
+        <!-- a card stat with a percent icon, like axiom's top-10 holders share; it is not a tax -->
+        <span><i class="ri-percent-line"></i>60%</span>
+        <button class="primaryBlue" data-native>0.5 SOL</button>
+      </div>
+      <!-- current pulse card: the quick buy is a div cell, not a button -->
+      <div class="card" data-pulse-token-address="5Hr7wZg7oBpVhH5nngRqzr5W7ZFUfCsfEhbziZJak7fr">
+        <span>CELL</span>
+        <div data-pulse-qb-face data-pulse-qb-ultra>
+          <div data-pulse-qb-cell class="group cursor-pointer" data-native id="qb-cell"><i class="ri-flashlight-fill"></i><span>0.25 SOL</span></div>
+        </div>
+      </div>
+    </section>
+    <!-- discover row: the token is only in react props (set in the script below) -->
+    <section class="pulse" aria-label="Table content" data-discover-rows="live">
+      <div data-index="0"><span>DISC</span><button type="button" class="bg-primaryBlue group/quickBuyButton" id="discover-qb" data-native><span>Buy</span><span>0.2 SOL</span></button></div>
+      <div data-index="1"><a href="/token/DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263?chain=sol">ZERO</a><button type="button" class="bg-primaryBlue group/quickBuyButton" id="zero-qb" data-native><span>Buy</span><span>0 SOL</span></button></div>
+    </section>
+    <!-- wallet-tracker trade row: no react data, the token comes from the row's /token/ link -->
+    <section class="pulse">
+      <div style="position: relative"><a href="/token/Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB?chain=sol">TRK</a><span>0.01</span><button type="button" class="bg-primaryBlue group/quickBuyButton" id="tracker-qb" data-native><i class="ri-flashlight-fill"></i><span>0.1</span></button></div>
+    </section>
+    <div class="window" id="instant">
+      <div class="title"><span>Instant Trade</span><button><i class="ri-wallet-line"></i><span>1</span></button></div>
+      <div class="body">
+        <div class="buy-click-container">
+          <div>
+            <div class="head"><span>Buy</span><div><img alt="SOL" width="12" height="12" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Ccircle cx='6' cy='6' r='6' fill='%239945ff'/%3E%3C/svg%3E" /><span>12.34</span></div></div>
+            <div class="row">
+              <div class="cursor-pointer text-increase" data-native>0.01</div>
+              <div class="cursor-pointer text-increase" data-native>0.1</div>
+              <div class="cursor-pointer text-increase" data-native>0.5</div>
+              <div class="cursor-pointer text-increase" data-native>1</div>
+            </div>
+            <div class="fees"><span><img alt="Slippage" width="10" height="10" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" />20%</span><span><i class="ri-gas-station-line"></i><span>0.001</span></span><span><i class="ri-coin-line"></i><span>0.001</span></span></div>
+          </div>
+          <div></div>
+          <div>
+            <div class="head"><span>Sell</span></div>
+            <div class="row">
+              <div class="cursor-pointer text-decrease" data-native>10%</div>
+              <div class="cursor-pointer text-decrease" data-native>25%</div>
+              <div class="cursor-pointer text-decrease" data-native>50%</div>
+              <div class="cursor-pointer text-decrease" data-native>100%</div>
+            </div>
+            <div class="fees"><span><img alt="Slippage" width="10" height="10" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'/%3E" />20%</span><span><i class="ri-gas-station-line"></i><span>0.001</span></span><span><i class="ri-coin-line"></i><span>0.001</span></span></div>
+          </div>
+        </div>
+        <div class="metrics">
+          <div><span>Bought</span><span>0</span></div>
+          <div><span>Sold</span><span>0</span></div>
+          <div><span>Holding</span><span>0</span></div>
+          <div><span>PnL</span><span>+0</span><span class="pct">(0%)</span></div>
+        </div>
+      </div>
+    </div>
+    <script>
+      const MINT = "7GCihgDB8fe6KNjn2MYtkzZcRjQy3t9GHdC8uHYmW2hr";
+      const PULSE_MINT = "4k3Dyjzvzp8eMZWUXbBCjEvwSkkk59S5iCNLY3QrkX6R";
+      // the page's own handlers: record the click and try to send a real order
+      window.nativeClicks = 0;
+      for (const el of document.querySelectorAll("[data-native]"))
+        el.addEventListener("click", () => {
+          window.nativeClicks++;
+          fetch("https://api3.axiom.trade/native-buy", { method: "POST", body: "{}" }).catch(() => {});
+        });
+      // react fiber stand-in on the discover button, shaped like axiom's live props
+      document.getElementById("discover-qb")["__reactFiber$fixture"] = {
+        memoizedProps: { type: "button" },
+        return: {
+          memoizedProps: { pairInfo: { pairAddress: "P", tokenAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" } },
+          return: { memoizedProps: { tokenPriceUsd: 0.004 }, return: { memoizedProps: { row: { chain: "sol", tokenAddress: "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", tokenTicker: "DISC", supply: 1e9 } }, return: null } },
+        },
+      };
+      // react fiber stand-in on the pulse card, shaped like axiom's live tree: display props first,
+      // the full row (market cap in sol) in a hook further down
+      document.querySelector(`[data-pulse-token-address="${PULSE_MINT}"]`)["__reactFiber$fixture"] = {
+        memoizedProps: { tokenAddress: PULSE_MINT, displayProtocol: "Pump" },
+        child: {
+          memoizedProps: { className: "row" },
+          memoizedState: {
+            memoizedState: { current: { row: { tokenAddress: PULSE_MINT, tokenTicker: "QBT", protocol: "Pump", supply: "1000000000", marketCap: 30 } } },
+            next: null,
+          },
+        },
+      };
+      // switching the ticker view: highlight the button and re-render the strip
+      window.tickerView = (view) => {
+        for (const b of document.querySelectorAll("#ticker-bar button"))
+          b.className = b.dataset.view === view ? "text-textSecondary" : "text-textTertiary";
+        const strip = document.querySelector("[data-ticker-strip]:not([data-scanpnl-owned])");
+        strip.firstElementChild.textContent = view.toUpperCase();
+        strip.firstElementChild.id = view + "-chip";
+      };
+      window.moveInstant = (x, y) => (document.getElementById("instant").style.transform = `translate(${x}px, ${y}px)`);
+      // live price feeds, as native-token.js and portfolio-stream.js publish them
+      let usd = 0.01;
+      window.setPrice = (v) => {
+        usd = v;
+        document.getElementById("price").textContent = "$" + v;
+        publish();
+      };
+      function publish() {
+        window.postMessage(
+          {
+            type: "scanpnl-quote-v1",
+            quote: { mint: MINT, name: "FIXT", usd, solUsd: 100, supply: 1e9, protocol: "Pump V1", at: Date.now(), url: location.pathname + location.search, source: "axiom-chart" },
+          },
+          location.origin,
+        );
+        window.postMessage({ type: "scanpnl-portfolio-tick-v1", mint: PULSE_MINT, usd: 0.002, at: Date.now() }, location.origin);
+        window.postMessage({ type: "scanpnl-portfolio-tick-v1", mint: "5Hr7wZg7oBpVhH5nngRqzr5W7ZFUfCsfEhbziZJak7fr", usd: 0.003, at: Date.now() }, location.origin);
+        window.postMessage({ type: "scanpnl-portfolio-tick-v1", mint: "Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB", usd: 0.001, at: Date.now() }, location.origin);
+      }
+      setInterval(publish, 400);
+    </script>
+  </body>
+</html>
