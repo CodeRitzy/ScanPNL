@@ -2,7 +2,7 @@
 
 <div align="center">
   <a href="#about-the-project">
-    <img src="ScanPNL/assets/scanpnl-icon.svg" alt="ScanPNL logo" width="96" height="96">
+    <img src="assets/scanpnl-icon.svg" alt="ScanPNL logo" width="96" height="96">
   </a>
 
   <h3 align="center">ScanPNL</h3>
@@ -71,7 +71,7 @@ The extension uses a local simulated account. It does not connect to a wallet, s
 
 2. Open `chrome://extensions` in Chrome and enable **Developer mode**.
 3. Select **Load unpacked**.
-4. Choose the `ScanPNL` folder—the folder containing `manifest.json`.
+4. Choose the cloned `ScanPNL` folder—the folder containing `manifest.json`.
 5. Refresh any open Axiom tabs.
 
 Chrome cannot install the source ZIP by dragging it onto the extensions page. Extract it first, then use **Load unpacked**.
@@ -79,9 +79,9 @@ Chrome cannot install the source ZIP by dragging it onto the extensions page. Ex
 ### Run Tests
 
 ```sh
-node --test ScanPNL/tests/*.test.mjs
-node ScanPNL/tests/e2e/run.mjs
-node ScanPNL/tests/e2e/lag.mjs
+node --test tests/*.test.mjs
+node tests/e2e/run.mjs
+node tests/e2e/lag.mjs
 ```
 
 The current release includes 84 automated checks: 28 unit tests, 55 browser checks against a stand-in Axiom page, and a page-lag check.
