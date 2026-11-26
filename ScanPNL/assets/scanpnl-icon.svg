@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ScanPNL icon">
+  <defs>
+    <linearGradient id="base" x1="72" y1="58" x2="440" y2="454" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#242a31"/>
+      <stop offset="0.54" stop-color="#4c535d"/>
+      <stop offset="1" stop-color="#9299a3"/>
+    </linearGradient>
+    <linearGradient id="line" x1="114" y1="172" x2="397" y2="323" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#d9dde2"/>
+    </linearGradient>
+  </defs>
+  <rect x="44" y="44" width="424" height="424" rx="116" fill="url(#base)" stroke="#090b0e" stroke-width="16"/>
+  <path d="M118 314L220 202L293 272L397 170" fill="none" stroke="#15191f" stroke-width="42" stroke-linecap="square" stroke-linejoin="miter" opacity=".7" transform="translate(0 12)"/>
+  <path d="M118 314L220 202L293 272L397 170" fill="none" stroke="url(#line)" stroke-width="30" stroke-linecap="square" stroke-linejoin="miter"/>
+</svg>

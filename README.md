@@ -2,7 +2,7 @@
 
 <div align="center">
   <a href="#about-the-project">
-    <img src="paper-terminal-extension/assets/scanpnl-icon.svg" alt="ScanPNL logo" width="96" height="96">
+    <img src="ScanPNL/assets/scanpnl-icon.svg" alt="ScanPNL logo" width="96" height="96">
   </a>
 
   <h3 align="center">ScanPNL</h3>
@@ -37,9 +37,9 @@
 
 ## About The Project
 
-ScanPNL adds an Instant Trade overlay to supported Solana terminal pages. It provides editable buy and sell presets, trench-only Quick Buy, live profit and loss, chart buy/sell markers, average entry and exit lines, a portfolio dashboard, a P&amp;L calendar, and shareable trade cards.
+ScanPNL turns Axiom's own trading interface into a paper-trading terminal. Buys and sells from Axiom's Instant Trade panel and its Quick Buy buttons on Pulse, Discover, and the wallet tracker fill against a simulated SOL balance at Axiom's live price, with Axiom's fees, presets, and quick-buy behavior. Positions, balances, the P&amp;L tracker, the portfolio, chart buy/sell markers, average entry and exit lines, and Share P&amp;L cards all show the simulated account inside Axiom's own interface.
 
-The extension uses a local simulated account. It does not connect to a wallet, sign transactions, custody funds, or place live on-chain orders.
+The extension uses a local simulated account. It does not connect to a wallet, sign transactions, custody funds, or place live on-chain orders. While ScanPNL is on, Axiom's real order and signing requests are blocked; switching it off in the popup removes it from Axiom entirely.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -48,6 +48,7 @@ The extension uses a local simulated account. It does not connect to a wallet, s
 - Vanilla JavaScript
 - Chrome Extensions Manifest V3
 - Chrome Storage API
+- Chrome declarativeNetRequest API
 - HTML and CSS
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
@@ -56,8 +57,9 @@ The extension uses a local simulated account. It does not connect to a wallet, s
 
 ### Prerequisites
 
-- Google Chrome or another Chromium-based browser with extension developer mode
+- Google Chrome or another Chromium-based browser (version 125 or newer) with extension developer mode
 - Node.js 24 or newer only if you want to run the automated tests
+- `@playwright/cli` installed globally only if you want to run the browser tests
 
 ### Installation
 
@@ -69,45 +71,45 @@ The extension uses a local simulated account. It does not connect to a wallet, s
 
 2. Open `chrome://extensions` in Chrome and enable **Developer mode**.
 3. Select **Load unpacked**.
-4. Choose the `paper-terminal-extension` folder—the folder containing `manifest.json`.
-5. Refresh any open supported terminal tabs.
+4. Choose the `ScanPNL` folder—the folder containing `manifest.json`.
+5. Refresh any open Axiom tabs.
 
 Chrome cannot install the source ZIP by dragging it onto the extensions page. Extract it first, then use **Load unpacked**.
 
 ### Run Tests
 
 ```sh
-npm ci --prefix tests --ignore-scripts
-npm test --prefix tests
+node --test ScanPNL/tests/*.test.mjs
+node ScanPNL/tests/e2e/run.mjs
+node ScanPNL/tests/e2e/lag.mjs
 ```
 
-The current release includes 282 automated checks across 25 suites.
+The current release includes 84 automated checks: 28 unit tests, 55 browser checks against a stand-in Axiom page, and a page-lag check.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Usage
 
-1. Open a supported Solana token chart.
-2. Use the Instant Trade panel to select a buy or sell preset and configure execution settings.
-3. Open the cog panel to type a Quick Buy SOL amount, choose its post-click behavior, or enable/disable Quick Buy on trenches.
-4. Hover a supported trenches row and press its Quick Buy control. Quick Buy can open the chart in a new tab, jump to it, or do nothing after saving the simulated fill.
-5. Review active positions and completed history in the dashboard. Use the P&amp;L calendar and cards to share a specific trade or a timeframe summary.
+1. Open the ScanPNL popup and switch it on. Open Axiom tabs reload into paper mode.
+2. Open a Solana token on Axiom. The ScanPNL chip sits on Axiom's Instant Trade panel, and its buy and sell buttons and presets place simulated orders.
+3. Press Quick Buy on Pulse, Discover, or the wallet tracker. The simulated buy uses your Axiom quick-buy preset and follows Axiom's quick-buy behavior (stay, go to the token, or open it in a new tab).
+4. Review simulated positions in Axiom's positions table, ticker bar, P&amp;L tracker, and portfolio (select the ScanPNL wallet). Use Share P&amp;L to make a card for a position.
+5. Use the popup to see the balance and open positions, set the starting balance, P&amp;L currency, and fill delay, export or import a backup, or reset the P&amp;L or the whole account.
 
-Settings save automatically. Buy/sell bubbles, average buy/sell lines, and terminal fee modeling are always enabled.
+Settings save automatically. Fees follow Axiom: the 1% platform fee, the token's tax, and your preset's priority fee and bribe.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Roadmap
 
-- [x] Instant Trade overlay with editable buy/sell presets
-- [x] Trench-only Quick Buy with typed SOL amount
+- [x] Simulated trading through Axiom's own Instant Trade panel
+- [x] Quick Buy on Pulse, Discover, and the wallet tracker
 - [x] Live P&amp;L, chart markers, and average price lines
-- [x] Positions, history, calendar summaries, and P&amp;L cards
+- [x] Positions, portfolio, P&amp;L tracker, and Share P&amp;L cards
+- [x] Real-order blocking while ScanPNL is on
 - [ ] Broader live-terminal compatibility verification
 - [ ] Optional custom P&amp;L-card branding
 - [ ] Adding other chains for trading
-
-See `paper-terminal-extension/CHANGES.md` for release notes and `COMPARISON.md` for implementation notes and verification limits.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 

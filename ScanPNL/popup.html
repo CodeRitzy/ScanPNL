@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>ScanPNL</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <!-- brand and the on/off switch; off removes scanpnl from axiom entirely -->
+    <header class="top">
+      <img class="logo" src="assets/scanpnl-icon-48.png" alt="" width="28" height="28" />
+      <div class="brand">
+        <strong>ScanPNL</strong>
+        <small id="mode-text">Loading…</small>
+      </div>
+      <button id="power" class="switch" role="switch" aria-checked="false" aria-label="ScanPNL on Axiom">
+        <span class="switch-label" id="power-label">Off</span><span class="knob" aria-hidden="true"></span>
+      </button>
+    </header>
+
+    <main>
+      <!-- account summary -->
+      <section class="glass hero" aria-label="Paper account">
+        <span class="label">Paper balance</span>
+        <div class="balance"><strong id="balance" class="figure">—</strong><span id="balance-unit">SOL</span></div>
+        <div class="hero-row">
+          <div><span class="label">PnL</span><strong id="pnl" class="figure">—</strong></div>
+          <div><span class="label">Equity</span><strong id="equity" class="figure">—</strong></div>
+          <div><span class="label">Open</span><strong id="open" class="figure">0</strong></div>
+        </div>
+      </section>
+
+      <!-- tabs -->
+      <nav class="glass tabs" role="tablist" aria-label="Sections">
+        <button role="tab" id="tab-positions" aria-controls="positions" aria-selected="true">Positions</button>
+        <button role="tab" id="tab-settings" aria-controls="settings" aria-selected="false" tabindex="-1">Settings</button>
+      </nav>
+
+      <section id="positions" class="pane" role="tabpanel" aria-labelledby="tab-positions">
+        <div id="position-list" class="list"></div>
+      </section>
+
+      <section id="settings" class="pane" role="tabpanel" aria-labelledby="tab-settings" hidden>
+        <div class="glass group">
+          <label class="field">
+            <span>Paper balance</span>
+            <span class="input-row">
+              <input id="balance-input" type="number" min="0" max="1000000" step="any" inputmode="decimal" />
+              <span class="unit">SOL</span>
+              <button id="set-balance" class="button">Set</button>
+            </span>
+          </label>
+          <div class="field">
+            <span id="currency-label">Show values in</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="currency-label">
+              <button role="radio" data-currency="SOL">SOL</button>
+              <button role="radio" data-currency="USD">USD</button>
+            </div>
+          </div>
+          <label class="field">
+            <span>Execution delay</span>
+            <span class="input-row">
+              <input id="delay-input" type="number" min="0" max="5000" step="50" inputmode="numeric" />
+              <span class="unit">ms</span>
+              <button id="set-delay" class="button">Set</button>
+            </span>
+          </label>
+        </div>
+
+        <div class="glass group">
+          <h2>Paper wallets</h2>
+          <div id="wallet-list" class="list compact"></div>
+          <div class="input-row">
+            <input id="wallet-name" maxlength="32" placeholder="Wallet name" aria-label="New wallet name" />
+            <input id="wallet-funding" type="number" min="0" step="any" value="0" aria-label="SOL moved from Main" class="short" />
+            <button id="create-wallet" class="button">Add</button>
+          </div>
+          <p class="hint">Funding comes from Main. Pick wallets in Axiom's wallet picker.</p>
+        </div>
+
+        <div class="glass group">
+          <h2>Data</h2>
+          <div class="actions">
+            <button id="export" class="button">Export</button>
+            <label class="button" for="import-file">Import</label>
+            <input id="import-file" type="file" accept="application/json" hidden />
+            <button id="confirm-import" class="button warn" hidden>Replace account</button>
+          </div>
+          <div class="actions">
+            <button id="reset-pnl" class="button">Reset PnL</button>
+            <button id="reset" class="button danger">Reset account</button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <p id="status" class="status" role="status" aria-live="polite"></p>
+    <script src="core.js"></script>
+    <script src="account.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
